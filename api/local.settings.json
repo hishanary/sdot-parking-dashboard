@@ -1,0 +1,9 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "FABRIC_SQL_SERVER": "YOUR_FABRIC_SQL_ENDPOINT.datawarehouse.fabric.microsoft.com",
+    "FABRIC_DATABASE": "SDOT_Parking"
+  }
+}
