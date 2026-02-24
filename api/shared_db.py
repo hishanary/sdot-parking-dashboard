@@ -3,23 +3,28 @@ shared_db.py
 Shared database connection helper for Azure Functions connecting to
 Microsoft Fabric SQL Analytics Endpoint via Azure AD (Entra ID).
 
-Uses DefaultAzureCredential for authentication, which works with:
-  - Managed Identity (when deployed to Azure)
-  - Azure CLI credentials (when developing locally)
-  - Environment variables (for CI/CD)
+Uses a Service Principal (App Registration) for authentication:
+  - AZURE_TENANT_ID: Your Azure AD tenant ID
+  - AZURE_CLIENT_ID: The App Registration's Application (client) ID
+  - AZURE_CLIENT_SECRET: The App Registration's client secret
 
 Includes a simple in-memory cache to avoid hitting Fabric on every request.
 """
 
 import os
-import json
 import time
+import struct
 import pyodbc
-from azure.identity import DefaultAzureCredential
+from azure.identity import ClientSecretCredential
 
 # ── Configuration ──
 FABRIC_SQL_SERVER = os.environ.get("FABRIC_SQL_SERVER", "")
 FABRIC_DATABASE = os.environ.get("FABRIC_DATABASE", "SDOT_Parking")
+
+# Service Principal credentials
+AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID", "")
+AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")
+AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
 
 # Cache: store query results in memory for N seconds
 # Azure Functions keep the process warm for ~10 minutes, so this works well
@@ -30,14 +35,17 @@ _cache = {}
 def get_connection():
     """
     Create a pyodbc connection to Microsoft Fabric SQL Endpoint
-    using Azure AD token-based authentication.
+    using a Service Principal (App Registration) for authentication.
     """
-    # Get an Azure AD token for SQL Database scope
-    credential = DefaultAzureCredential()
+    # Get an Azure AD token using the Service Principal
+    credential = ClientSecretCredential(
+        tenant_id=AZURE_TENANT_ID,
+        client_id=AZURE_CLIENT_ID,
+        client_secret=AZURE_CLIENT_SECRET
+    )
     token = credential.get_token("https://database.windows.net/.default")
 
     # Build the connection string
-    # Fabric SQL endpoints use TDS (Tabular Data Stream) protocol
     conn_str = (
         f"DRIVER={{ODBC Driver 18 for SQL Server}};"
         f"SERVER={FABRIC_SQL_SERVER};"
@@ -47,7 +55,6 @@ def get_connection():
     )
 
     # pyodbc needs the token as a bytes struct for Azure AD auth
-    import struct
     token_bytes = token.token.encode("UTF-16-LE")
     token_struct = struct.pack(f'<I{len(token_bytes)}s', len(token_bytes), token_bytes)
 
