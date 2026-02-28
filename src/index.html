@@ -74,6 +74,18 @@ tbody tr:hover{background:#f8fafc}
 <option value="stations">Pay Stations (by peak rate)</option>
 <option value="curb">Curb Spaces (by category)</option>
 </select></div>
+<div id="fCatWrap" style="display:none"><label>Curb Category</label><br>
+<select id="fCat" onchange="D.updateMap(D.getArea())">
+<option value="all">All Categories</option>
+<option value="PAID">Paid Parking</option>
+<option value="LOAD">Loading Zone</option>
+<option value="ZONE">Special Zone</option>
+<option value="BUS">Bus Zone</option>
+<option value="DP">Disabled</option>
+<option value="BIKE">Bike</option>
+<option value="NP">No Parking</option>
+<option value="NS">Non-Space</option>
+</select></div>
 </div>
 </header>
 
@@ -250,7 +262,9 @@ class Dashboard {
             } else this.map.setView([47.615,-122.335],13);
         } else {
             this.curbLayer.addTo(this.map);
-            const pts=area==='all'?CURB:CURB.filter(s=>s[2]===area);
+            const cat=document.getElementById('fCat').value;
+            let pts=area==='all'?CURB:CURB.filter(s=>s[2]===area);
+            if(cat!=='all') pts=pts.filter(s=>s[3]===cat);
             pts.forEach(s=>{
                 const col=COLORS[s[3]]||COLORS.Other;
                 L.circleMarker([s[0],s[1]],{
@@ -269,7 +283,10 @@ class Dashboard {
             } else this.map.setView([47.615,-122.335],13);
         }
     }
-    updateMapLayer(){this.updateMap(this.getArea())}
+    updateMapLayer(){
+        document.getElementById('fCatWrap').style.display=this.getLayer()==='curb'?'':'none';
+        this.updateMap(this.getArea());
+    }
 
     renderRatesChart(fa){
         const sorted=[...fa].sort((a,b)=>Math.max(b.r1||0,b.r2||0,b.r3||0)-Math.max(a.r1||0,a.r2||0,a.r3||0)).slice(0,15);
