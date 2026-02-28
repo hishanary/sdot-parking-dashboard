@@ -3,526 +3,436 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seattle Parking Story | SDOT Live Dashboard</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Seattle SDOT Parking Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1"></script>
 <style>
+:root{--bg:#f0f2f5;--card:#fff;--header:#0f172a;--text:#1e293b;--muted:#64748b;--accent:#3b82f6;--gap:14px;--r:10px}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:#0F172A;color:#E2E8F0;overflow-x:hidden}
-.header{background:linear-gradient(135deg,#0F172A 0%,#1E293B 100%);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155;position:sticky;top:0;z-index:1000}
-.header h1{font-size:20px;font-weight:700;color:#F8FAFC;letter-spacing:-0.5px}
-.header h1 span{color:#0EA5E9}
-.header-subtitle{font-size:12px;color:#94A3B8;margin-top:2px}
-.header-right{display:flex;align-items:center;gap:16px}
-.live-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:#10B981;text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
-.live-dot{width:8px;height:8px;border-radius:50%;background:#10B981;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.kpi-bar{display:flex;gap:12px;flex-wrap:wrap}
-.kpi{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:8px 16px;text-align:center;min-width:120px}
-.kpi-value{font-size:20px;font-weight:700;color:#0EA5E9}
-.kpi-value.green{color:#10B981}.kpi-value.amber{color:#F59E0B}.kpi-value.purple{color:#8B5CF6}
-.kpi-label{font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
-.main{display:flex;height:calc(100vh - 72px)}
-.sidebar{width:320px;min-width:320px;background:#1E293B;border-right:1px solid #334155;overflow-y:auto;display:flex;flex-direction:column}
-.map-container{flex:1;position:relative}
-#map{width:100%;height:100%}
-.sb-section{padding:16px;border-bottom:1px solid #334155}
-.sb-title{font-size:13px;font-weight:600;color:#F8FAFC;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.sb-title::before{content:'';width:3px;height:14px;background:#0EA5E9;border-radius:2px}
-.counter{font-size:13px;color:#94A3B8;padding:8px 16px;background:#0F172A;text-align:center;border-bottom:1px solid #334155}
-.counter strong{color:#0EA5E9}
-.filter-group{margin-bottom:12px}
-.filter-label{font-size:11px;font-weight:500;color:#94A3B8;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px}
-select,.rate-slider{width:100%;background:#0F172A;border:1px solid #334155;color:#E2E8F0;padding:8px 10px;border-radius:6px;font-size:13px;font-family:'Inter',sans-serif}
-select:focus{outline:none;border-color:#0EA5E9}
-.checkbox-group{display:flex;flex-wrap:wrap;gap:6px}
-.cb-label{display:flex;align-items:center;gap:4px;font-size:12px;color:#CBD5E1;background:#0F172A;padding:4px 8px;border-radius:4px;border:1px solid #334155;cursor:pointer;transition:all .15s}
-.cb-label:hover{border-color:#0EA5E9}
-.cb-label input{accent-color:#0EA5E9}
-.rate-display{display:flex;justify-content:space-between;font-size:11px;color:#94A3B8;margin-top:4px}
-.btn-reset{width:100%;padding:8px;background:transparent;border:1px solid #475569;color:#94A3B8;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
-.btn-reset:hover{border-color:#0EA5E9;color:#0EA5E9}
-.day-toggle{display:flex;gap:4px}
-.day-btn{flex:1;padding:6px;background:#0F172A;border:1px solid #334155;color:#94A3B8;border-radius:4px;font-size:11px;cursor:pointer;text-align:center;font-family:'Inter',sans-serif;transition:all .15s}
-.day-btn.active{background:#0EA5E9;color:#FFF;border-color:#0EA5E9}
-.chart-container{position:relative;width:100%;height:160px}
-.legend-items{display:flex;flex-direction:column;gap:6px}
-.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#CBD5E1}
-.legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
-.leaflet-popup-content-wrapper{background:#1E293B;color:#E2E8F0;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
-.leaflet-popup-tip{background:#1E293B}
-.leaflet-popup-content{font-family:'Inter',sans-serif;font-size:13px;line-height:1.5;margin:12px 16px}
-.popup-title{font-weight:600;font-size:14px;color:#F8FAFC;margin-bottom:6px}
-.popup-area{font-size:12px;color:#0EA5E9;margin-bottom:8px}
-.popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
-.popup-label{font-size:11px;color:#94A3B8}
-.popup-val{font-size:13px;font-weight:500;color:#F8FAFC}
-.leaflet-container{background:#0F172A}
-.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(14,165,233,0.3)!important}
-.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:rgba(14,165,233,0.7)!important;color:#FFF!important;font-family:'Inter',sans-serif!important;font-weight:600!important}
-/* Loading overlay */
-.loading-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity 0.5s}
-.loading-overlay.hidden{opacity:0;pointer-events:none}
-.spinner{width:40px;height:40px;border:3px solid #334155;border-top-color:#0EA5E9;border-radius:50%;animation:spin 0.8s linear infinite}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+.wrap{max-width:1480px;margin:0 auto;padding:var(--gap)}
+header{background:var(--header);color:#fff;padding:18px 24px;border-radius:var(--r);margin-bottom:var(--gap);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+header h1{font-size:20px;font-weight:700}
+header .sub{font-size:12px;color:rgba(255,255,255,.55);margin-top:2px}
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filters label{font-size:11px;color:rgba(255,255,255,.6)}
+.filters select{padding:5px 8px;border:1px solid rgba(255,255,255,.2);border-radius:4px;background:rgba(255,255,255,.08);color:#fff;font-size:12px}
+.filters select option{background:#1e293b;color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--gap);margin-bottom:var(--gap)}
+.kpi{background:var(--card);border-radius:var(--r);padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.kpi .val{font-size:24px;font-weight:700;margin:2px 0}
+.kpi .detail{font-size:11px;color:var(--muted)}
+.kpi.hi{border-left:3px solid #ef4444}
+.kpi.mid{border-left:3px solid #f59e0b}
+.kpi.lo{border-left:3px solid #3b82f6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:var(--gap)}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap);margin-bottom:var(--gap)}
+.card{background:var(--card);border-radius:var(--r);padding:18px 22px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h3{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text)}
+.card canvas{max-height:300px}
+.map-wrap{height:480px;border-radius:var(--r);overflow:hidden;position:relative}
+#map{height:100%;width:100%}
+.map-legend{position:absolute;bottom:24px;left:12px;background:rgba(255,255,255,.94);border-radius:8px;padding:10px 14px;font-size:11px;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.15);line-height:1.8}
+.map-legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.layer-ctrl{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.94);border-radius:8px;padding:8px 12px;font-size:11px;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.layer-ctrl label{display:block;cursor:pointer;padding:2px 0}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{text-align:left;padding:8px 10px;border-bottom:2px solid #e2e8f0;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;white-space:nowrap;user-select:none}
+thead th:hover{color:var(--text);background:#f8fafc}
+tbody td{padding:8px 10px;border-bottom:1px solid #f1f5f9}
+tbody tr:hover{background:#f8fafc}
+.rate-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle;margin-right:4px}
+.footer{text-align:center;color:var(--muted);font-size:11px;padding:14px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}.map-wrap{height:360px}}
+.loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.loading-spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.2);border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px}
+.loading-text{font-size:14px;color:rgba(255,255,255,.8)}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{margin-top:16px;font-size:14px;color:#94A3B8}
-.loading-sub{font-size:11px;color:#475569;margin-top:4px}
-/* Error state */
-.error-banner{background:#7F1D1D;color:#FCA5A5;padding:8px 16px;font-size:12px;text-align:center;display:none}
-.error-banner.show{display:block}
-/* Last updated */
-.last-updated{font-size:10px;color:#475569;text-align:center;padding:4px 16px}
-/* Story Section */
-.story-section{background:#0F172A;padding:40px 24px}
-.story-header{text-align:center;margin-bottom:40px}
-.story-header h2{font-size:28px;font-weight:700;color:#F8FAFC;margin-bottom:8px}
-.story-header p{font-size:14px;color:#94A3B8;max-width:600px;margin:0 auto}
-.story-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:24px;max-width:1200px;margin:0 auto}
-.story-card{background:#1E293B;border-radius:12px;padding:24px;border:1px solid #334155;transition:transform .2s,border-color .2s}
-.story-card:hover{transform:translateY(-2px);border-color:#0EA5E9}
-.story-num{font-size:48px;font-weight:800;color:#0EA5E9;opacity:0.2;line-height:1;margin-bottom:-10px}
-.story-card h3{font-size:18px;font-weight:600;color:#F8FAFC;margin-bottom:8px}
-.story-card .stat{font-size:36px;font-weight:700;margin:12px 0}
-.story-card .stat.blue{color:#0EA5E9}.story-card .stat.green{color:#10B981}
-.story-card .stat.amber{color:#F59E0B}.story-card .stat.red{color:#EF4444}
-.story-card .stat.purple{color:#8B5CF6}
-.story-card p{font-size:13px;color:#94A3B8;line-height:1.6}
-.story-chart{height:140px;margin:12px 0}
-.footer{text-align:center;padding:20px;color:#475569;font-size:11px;border-top:1px solid #1E293B}
-@media(max-width:768px){
-.main{flex-direction:column;height:auto}.sidebar{width:100%;min-width:100%;max-height:300px}
-#map{height:60vh}.story-grid{grid-template-columns:1fr}.kpi-bar{display:none}
-}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div>
-    <h1><span>Seattle</span> Parking Story</h1>
-    <div class="header-subtitle">SDOT On-Street Parking Infrastructure | Live from Microsoft Fabric</div>
-  </div>
-  <div class="header-right">
-    <div class="live-badge"><div class="live-dot"></div> Data Synced</div>
-    <div class="kpi-bar">
-      <div class="kpi"><div class="kpi-value" id="kpiStations">--</div><div class="kpi-label">Pay Stations</div></div>
-      <div class="kpi"><div class="kpi-value green" id="kpiCurb">--</div><div class="kpi-label">Curb Spaces</div></div>
-      <div class="kpi"><div class="kpi-value amber" id="kpiAreas">--</div><div class="kpi-label">Paid Areas</div></div>
-      <div class="kpi"><div class="kpi-value purple" id="kpiRate">--</div><div class="kpi-label">Avg Rate/hr</div></div>
-    </div>
-  </div>
+<div id="loading" class="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading dashboard data...</div>
 </div>
 
-<div class="error-banner" id="errorBanner"></div>
+<div class="wrap">
+<header>
+<div>
+<h1>Seattle SDOT Parking Infrastructure</h1>
+<div class="sub">Pay Stations &bull; Curb Space Inventory &bull; Rate Analysis</div>
+</div>
+<div class="filters">
+<div><label>Neighborhood</label><br>
+<select id="fArea" onchange="D.filter()"><option value="all">All Neighborhoods</option></select></div>
+<div><label>Map Layer</label><br>
+<select id="fLayer" onchange="D.updateMapLayer()">
+<option value="stations">Pay Stations (by peak rate)</option>
+<option value="curb">Curb Spaces (by category)</option>
+</select></div>
+</div>
+</header>
 
-<div class="main">
-  <div class="sidebar">
-    <div class="counter">Showing <strong id="visCount">--</strong> of <strong id="totalCount">--</strong> stations</div>
-    <div class="last-updated" id="lastUpdated">Loading data from Fabric...</div>
+<section class="kpis" id="kpis"></section>
 
-    <div class="sb-section">
-      <div class="sb-title">Filters</div>
-      <div class="filter-group">
-        <div class="filter-label">Neighborhood</div>
-        <select id="filterArea"><option value="">All Neighborhoods</option></select>
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Rate Range ($/hr)</div>
-        <input type="range" id="filterRate" class="rate-slider" min="0" max="2.5" step="0.5" value="2.5">
-        <div class="rate-display"><span>$0.00</span><span id="rateVal">$2.50</span></div>
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Hardware Model</div>
-        <div class="checkbox-group">
-          <label class="cb-label"><input type="checkbox" value="MS1" checked class="modelCb"> MS1</label>
-          <label class="cb-label"><input type="checkbox" value="REV1" checked class="modelCb"> REV1</label>
-          <label class="cb-label"><input type="checkbox" value="VIR" checked class="modelCb"> VIR</label>
-        </div>
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Day Type (rate coloring)</div>
-        <div class="day-toggle">
-          <button class="day-btn active" data-day="wkd">Weekday</button>
-          <button class="day-btn" data-day="sat">Saturday</button>
-        </div>
-      </div>
-      <button class="btn-reset" id="resetBtn">Reset All Filters</button>
-    </div>
-
-    <div class="sb-section">
-      <div class="sb-title">Rate Legend</div>
-      <div class="legend-items">
-        <div class="legend-item"><div class="legend-dot" style="background:#10B981"></div> $1.00/hr (Base Rate)</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div> $1.50/hr (Mid Tier)</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div> $2.00/hr</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#DC2626"></div> $2.50/hr (Premium)</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#6B7280"></div> $0.00 (Inactive)</div>
-      </div>
-    </div>
-
-    <div class="sb-section">
-      <div class="sb-title">Stations by Model</div>
-      <div class="chart-container"><canvas id="modelChart"></canvas></div>
-    </div>
-
-    <div class="sb-section">
-      <div class="sb-title">Top Neighborhoods</div>
-      <div class="chart-container" style="height:200px"><canvas id="areaChart"></canvas></div>
-    </div>
-  </div>
-
-  <div class="map-container">
-    <div id="map"></div>
-    <div class="loading-overlay" id="loadingOverlay">
-      <div class="spinner"></div>
-      <div class="loading-text">Connecting to Microsoft Fabric...</div>
-      <div class="loading-sub">Fetching live pay station data</div>
-    </div>
-  </div>
+<div class="grid2">
+<div class="card" style="grid-column:1/3">
+<h3>Interactive Map — Pay Stations & Curb Space Inventory</h3>
+<div class="map-wrap">
+<div id="map"></div>
+<div class="map-legend" id="map-legend"></div>
+</div>
+</div>
 </div>
 
-<!-- Story Section -->
-<div class="story-section">
-  <div class="story-header">
-    <h2>The Seattle Parking Story</h2>
-    <p>A data-driven look at how Seattle manages its on-street parking infrastructure across 24 neighborhoods.</p>
-  </div>
-  <div class="story-grid">
-    <div class="story-card">
-      <div class="story-num">01</div>
-      <h3>The $1 Question</h3>
-      <div class="stat blue" id="stat01">--</div>
-      <p>of all pay stations charge just <strong>$1.00/hr</strong> as their base rate. This uniform pricing across the majority of neighborhoods suggests a policy of accessibility, though it may leave revenue on the table in high-demand areas.</p>
-    </div>
-    <div class="story-card">
-      <div class="story-num">02</div>
-      <h3>Belltown: Parking Capital</h3>
-      <div class="stat green" id="stat02">--</div>
-      <p>pay stations make Belltown the most meter-dense neighborhood in Seattle. South Lake Union follows closely. Together, these two neighborhoods hold nearly 30% of all city meters.</p>
-    </div>
-    <div class="story-card">
-      <div class="story-num">03</div>
-      <h3>The Curb Space Equation</h3>
-      <div class="stat amber" id="stat03">--</div>
-      <p>of all inventoried curb space is actually available as paid parking. The majority is restricted: No Parking, No Stopping. For every paid spot, there are roughly 3 restricted spaces.</p>
-      <div class="story-chart"><canvas id="curbPieChart"></canvas></div>
-    </div>
-    <div class="story-card">
-      <div class="story-num">04</div>
-      <h3>Going Plateless</h3>
-      <div class="stat purple" id="stat04">--</div>
-      <p>of pay stations use <strong>plate-based technology</strong>. No more dashboard receipts. Officers use license plate recognition for enforcement. The VIR model represents the future with fully digital meters.</p>
-      <div class="story-chart"><canvas id="techChart"></canvas></div>
-    </div>
-    <div class="story-card">
-      <div class="story-num">05</div>
-      <h3>Premium Zones</h3>
-      <div class="stat red">$2.50</div>
-      <p>per hour is the highest base rate, found in <strong>Denny Triangle</strong>, <strong>Commercial Core</strong>, and <strong>15th Ave E</strong>. These areas use demand-responsive pricing to manage the highest parking pressure in the city.</p>
-    </div>
-    <div class="story-card">
-      <div class="story-num">06</div>
-      <h3>The Hardware Fleet</h3>
-      <div class="stat blue">3</div>
-      <p>hardware models serve the entire city. <strong>MS1</strong> is the workhorse. <strong>REV1</strong> is the revised model for high-traffic zones. <strong>VIR</strong> represents the future: virtual, mobile-first meters.</p>
-    </div>
-  </div>
+<div class="grid3">
+<div class="card"><h3>Peak Hourly Rate by Neighborhood</h3><canvas id="c-rates"></canvas></div>
+<div class="card"><h3>Pay Station Count by Neighborhood</h3><canvas id="c-count"></canvas></div>
+<div class="card"><h3>Curb Space Allocation</h3><canvas id="c-curb"></canvas></div>
 </div>
 
-<div class="footer">
-  SDOT Parking Infrastructure Dashboard | Live data from Microsoft Fabric Lakehouse | <span id="footerTime"></span>
+<div class="grid2">
+<div class="card"><h3>Curb Allocation by Neighborhood (Top 12)</h3><canvas id="c-stacked"></canvas></div>
+<div class="card"><h3>Operating Hours Comparison</h3><canvas id="c-hours"></canvas></div>
+</div>
+
+<div class="card" style="margin-bottom:var(--gap)">
+<h3>Neighborhood Scorecard <span style="font-weight:400;color:var(--muted);font-size:11px">(click headers to sort)</span></h3>
+<div class="tbl-wrap" id="tbl"></div>
+</div>
+
+<div class="footer">Data source: Seattle DOT (SDOT) &bull; Fabric Lakehouse: SDOT_Parking &bull; Pay Stations: <span id="ft-stations">—</span> &bull; Curb Spaces: <span id="ft-curb">—</span></div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-// Configuration
-// ══════════════════════════════════════════════
-const DATA_BASE = '/data';  // Static JSON files
+// Global data — loaded via fetch
+let STATIONS=[], CURB=[], AREAS=[], CURB_ALLOC={};
 
-// ══════════════════════════════════════════════
-// State
-// ══════════════════════════════════════════════
-let stations = [];
-let curbStats = {};
-let dayType = 'wkd';
-let markers = null;
-let modelChartInst, areaChartInst;
+const COLORS={PAID:'#3b82f6',NP:'#94a3b8',NS:'#cbd5e1',LOAD:'#f59e0b',ZONE:'#8b5cf6',BUS:'#ef4444',RPZ:'#10b981',Other:'#6b7280',DP:'#06b6d4',BIKE:'#22c55e',TL:'#a855f7',CS:'#ec4899'};
+const CAT_LABELS={PAID:'Paid Parking',NP:'No Parking',NS:'Non-Space',LOAD:'Loading Zone',ZONE:'Special Zone',BUS:'Bus Zone',RPZ:'Residential PZ',DP:'Disabled',BIKE:'Bike',TL:'Time-Limited',CS:'Carshare',Other:'Other'};
 
-// ══════════════════════════════════════════════
-// Map Setup
-// ══════════════════════════════════════════════
-const map = L.map('map', { center: [47.615, -122.34], zoom: 13 });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-  subdomains: 'abcd', maxZoom: 19
-}).addTo(map);
-
-// ══════════════════════════════════════════════
-// Data Fetching
-// ══════════════════════════════════════════════
-async function fetchStations() {
-  const res = await fetch(`${DATA_BASE}/stations.json`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-  return await res.json();
+function rateColor(r){
+    if(r>=6) return '#dc2626';
+    if(r>=4) return '#f97316';
+    if(r>=2.5) return '#eab308';
+    if(r>=1.5) return '#22c55e';
+    return '#3b82f6';
+}
+function rateLabel(r){
+    if(r>=6) return '$6+';
+    if(r>=4) return '$4-6';
+    if(r>=2.5) return '$2.50-4';
+    if(r>=1.5) return '$1.50-2.50';
+    return '$1-1.50';
 }
 
-async function fetchCurbStats() {
-  const res = await fetch(`${DATA_BASE}/curb-stats.json`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-  return await res.json();
-}
-
-async function loadData() {
-  const overlay = document.getElementById('loadingOverlay');
-  const errorBanner = document.getElementById('errorBanner');
-  errorBanner.classList.remove('show');
-
-  try {
-    overlay.classList.remove('hidden');
-    // Fetch both endpoints in parallel
-    const [stationData, curbData] = await Promise.all([fetchStations(), fetchCurbStats()]);
-    stations = stationData;
-    curbStats = curbData;
-
-    // Update KPIs
-    const totalCurb = Object.values(curbStats).reduce((sum, a) => sum + a.total, 0);
-    const areas = new Set(stations.map(s => s.area).filter(a => a && a !== 'Unknown'));
-    const avgRate = stations.length > 0 ? (stations.reduce((s, r) => s + r.wkd, 0) / stations.length) : 0;
-
-    document.getElementById('kpiStations').textContent = stations.length.toLocaleString();
-    document.getElementById('kpiCurb').textContent = totalCurb.toLocaleString();
-    document.getElementById('kpiAreas').textContent = areas.size;
-    document.getElementById('kpiRate').textContent = '$' + avgRate.toFixed(2);
-    document.getElementById('totalCount').textContent = stations.length.toLocaleString();
-
-    // Populate area filter
-    populateAreaFilter();
-
-    // Compute dynamic story stats
-    const dollarOneCount = stations.filter(s => s.wkd === 1.0).length;
-    const dollarOnePct = Math.round((dollarOneCount / stations.length) * 100);
-    document.getElementById('stat01').textContent = dollarOnePct + '%';
-
-    const belltownCount = stations.filter(s => s.area === 'Belltown').length;
-    document.getElementById('stat02').textContent = belltownCount;
-
-    const paidCurb = Object.values(curbStats).reduce((s, a) => s + a.paid, 0);
-    const paidPct = ((paidCurb / totalCurb) * 100).toFixed(1);
-    document.getElementById('stat03').textContent = paidPct + '%';
-
-    const plateCount = stations.filter(s => s.cat === 'PLATE').length;
-    const platePct = Math.round((plateCount / stations.length) * 100);
-    document.getElementById('stat04').textContent = platePct + '%';
-
-    // Build map and charts
-    buildMarkers();
-    buildStoryCharts();
-
-    // Update timestamp
-    const now = new Date();
-    document.getElementById('lastUpdated').textContent = `Last refreshed: ${now.toLocaleTimeString()}`;
-    document.getElementById('footerTime').textContent = `Last refreshed: ${now.toLocaleString()}`;
-
-    overlay.classList.add('hidden');
-
-  } catch (err) {
-    console.error('Failed to load data:', err);
-    overlay.classList.add('hidden');
-    errorBanner.textContent = `Data load failed: ${err.message}. Using cached data if available.`;
-    errorBanner.classList.add('show');
-  }
-}
-
-// ══════════════════════════════════════════════
-// Filters
-// ══════════════════════════════════════════════
-function populateAreaFilter() {
-  const areaSelect = document.getElementById('filterArea');
-  const current = areaSelect.value;
-  // Clear existing options (keep first)
-  while (areaSelect.options.length > 1) areaSelect.remove(1);
-  const areas = [...new Set(stations.map(s => s.area))].filter(a => a && a !== 'Unknown').sort();
-  areas.forEach(a => {
-    const opt = document.createElement('option');
-    opt.value = a; opt.text = a;
-    areaSelect.appendChild(opt);
-  });
-  if (current) areaSelect.value = current;
-}
-
-// ══════════════════════════════════════════════
-// Map Markers
-// ══════════════════════════════════════════════
-function rateColor(rate) {
-  if (rate <= 0) return '#6B7280';
-  if (rate <= 1.0) return '#10B981';
-  if (rate <= 1.5) return '#F59E0B';
-  if (rate <= 2.0) return '#EF4444';
-  return '#DC2626';
-}
-
-function createIcon(color) {
-  return L.divIcon({
-    className: 'custom-marker',
-    html: `<div style="width:10px;height:10px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 6px ${color}"></div>`,
-    iconSize: [14, 14], iconAnchor: [7, 7]
-  });
-}
-
-function buildMarkers() {
-  if (markers) { map.removeLayer(markers); }
-  markers = L.markerClusterGroup({
-    maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false,
-    iconCreateFunction: function(cluster) {
-      const count = cluster.getChildCount();
-      let size = count < 20 ? 'small' : count < 50 ? 'medium' : 'large';
-      return L.divIcon({
-        html: `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:12px;font-weight:600;color:#fff">${count}</div>`,
-        className: `marker-cluster marker-cluster-${size}`, iconSize: L.point(40, 40)
-      });
+class Dashboard {
+    constructor(){
+        this.map=null;this.stationLayer=null;this.curbLayer=null;
+        this.charts={};this.sortCol='cnt';this.sortDir='desc';
     }
-  });
+    async loadData(){
+        try{
+            const [stations,curb,areas,alloc]=await Promise.all([
+                fetch('data/stations.json').then(r=>{if(!r.ok)throw new Error('stations '+r.status);return r.json()}),
+                fetch('data/curb-points.json').then(r=>{if(!r.ok)throw new Error('curb '+r.status);return r.json()}),
+                fetch('data/areas.json').then(r=>{if(!r.ok)throw new Error('areas '+r.status);return r.json()}),
+                fetch('data/curb-alloc.json').then(r=>{if(!r.ok)throw new Error('alloc '+r.status);return r.json()})
+            ]);
+            STATIONS=stations;
+            CURB=curb;
+            AREAS=areas;
+            CURB_ALLOC=alloc;
+            document.getElementById('ft-stations').textContent=STATIONS.length.toLocaleString();
+            document.getElementById('ft-curb').textContent=CURB.length.toLocaleString();
+            return true;
+        }catch(e){
+            console.error('Data load error:',e);
+            document.getElementById('loading').innerHTML=
+                '<div style="text-align:center;padding:20px"><div style="font-size:18px;margin-bottom:8px">Data Load Error</div><div style="font-size:13px;color:rgba(255,255,255,.6)">'+e.message+'</div></div>';
+            return false;
+        }
+    }
+    async init(){
+        const ok=await this.loadData();
+        if(!ok) return;
+        document.getElementById('loading').style.display='none';
+        this.populateFilter();
+        this.initMap();
+        this.filter();
+    }
+    populateFilter(){
+        const sel=document.getElementById('fArea');
+        AREAS.sort((a,b)=>b.cnt-a.cnt).forEach(a=>{
+            const o=document.createElement('option');o.value=a.area;o.textContent=a.area+' ('+a.cnt+')';
+            sel.appendChild(o);
+        });
+    }
+    getArea(){return document.getElementById('fArea').value}
+    getLayer(){return document.getElementById('fLayer').value}
 
-  const selArea = document.getElementById('filterArea').value;
-  const maxRate = parseFloat(document.getElementById('filterRate').value);
-  const models = [...document.querySelectorAll('.modelCb:checked')].map(c => c.value);
+    filter(){
+        const area=this.getArea();
+        const fa=area==='all'?AREAS:AREAS.filter(a=>a.area===area);
+        this.renderKPIs(fa,area);
+        this.renderRatesChart(fa);
+        this.renderCountChart(fa);
+        this.renderCurbDonut(area);
+        this.renderStackedBar(area);
+        this.renderHoursChart(fa);
+        this.renderTable(fa);
+        this.updateMap(area);
+    }
 
-  let visible = 0;
-  const areaCounts = {};
-  const modelCounts = { MS1: 0, REV1: 0, VIR: 0 };
+    renderKPIs(fa,area){
+        const total=fa.reduce((s,a)=>s+a.cnt,0);
+        const peakRates=fa.map(a=>Math.max(a.r1||0,a.r2||0,a.r3||0));
+        const maxPeak=Math.max(...peakRates);
+        const avgPeak=(peakRates.reduce((s,v)=>s+v,0)/peakRates.length).toFixed(2);
+        const mostExpensive=fa.reduce((best,a)=>{
+            const p=Math.max(a.r1||0,a.r2||0,a.r3||0);
+            return p>best.p?{area:a.area,p}:best;
+        },{area:'',p:0});
+        const curbTotal=area==='all'?
+            Object.values(CURB_ALLOC).reduce((s,a)=>Object.values(a).reduce((s2,v)=>s2+v,0)+s,0):
+            (CURB_ALLOC[area]?Object.values(CURB_ALLOC[area]).reduce((s,v)=>s+v,0):0);
+        const paidSpaces=area==='all'?
+            Object.values(CURB_ALLOC).reduce((s,a)=>s+(a.PAID||0),0):
+            (CURB_ALLOC[area]?.PAID||0);
 
-  stations.forEach(s => {
-    const rate = dayType === 'wkd' ? s.wkd : s.sat;
-    if (selArea && s.area !== selArea) return;
-    if (rate > maxRate) return;
-    if (!models.includes(s.model) && s.model !== 'Unknown') return;
+        document.getElementById('kpis').innerHTML=`
+        <div class="kpi lo"><div class="label">Pay Stations</div><div class="val">${total.toLocaleString()}</div><div class="detail">${fa.length} neighborhoods</div></div>
+        <div class="kpi hi"><div class="label">Highest Peak Rate</div><div class="val">$${maxPeak.toFixed(2)}/hr</div><div class="detail">${mostExpensive.area}</div></div>
+        <div class="kpi mid"><div class="label">Avg Peak Rate</div><div class="val">$${avgPeak}/hr</div><div class="detail">Across filtered areas</div></div>
+        <div class="kpi"><div class="label">Curb Spaces</div><div class="val">${curbTotal.toLocaleString()}</div><div class="detail">${paidSpaces.toLocaleString()} paid</div></div>
+        <div class="kpi lo"><div class="label">Paid % of Curb</div><div class="val">${curbTotal>0?(paidSpaces/curbTotal*100).toFixed(1):'0'}%</div><div class="detail">Remainder: No-park, loading, bus, etc.</div></div>`;
+    }
 
-    const color = rateColor(rate);
-    const marker = L.marker([s.lat, s.lng], { icon: createIcon(color) });
-    marker.bindPopup(`
-      <div class="popup-title">${s.id}</div>
-      <div class="popup-area">${s.area}${s.sub ? ' / ' + s.sub : ''}</div>
-      <div class="popup-grid">
-        <div><div class="popup-label">Weekday Rate</div><div class="popup-val">${s.wkd > 0 ? '$' + s.wkd.toFixed(2) + '/hr' : 'N/A'}</div></div>
-        <div><div class="popup-label">Saturday Rate</div><div class="popup-val">${s.sat > 0 ? '$' + s.sat.toFixed(2) + '/hr' : 'N/A'}</div></div>
-        <div><div class="popup-label">Model</div><div class="popup-val">${s.model}</div></div>
-        <div><div class="popup-label">Category</div><div class="popup-val">${s.cat || 'N/A'}</div></div>
-        <div><div class="popup-label">Hours</div><div class="popup-val">${s.shr && s.ehr ? s.shr + ' - ' + s.ehr : 'N/A'}</div></div>
-      </div>
-    `);
-    markers.addLayer(marker);
-    visible++;
-    areaCounts[s.area] = (areaCounts[s.area] || 0) + 1;
-    if (modelCounts[s.model] !== undefined) modelCounts[s.model]++;
-  });
+    initMap(){
+        this.map=L.map('map',{zoomControl:true}).setView([47.615,-122.335],13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+            attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains:'abcd',maxZoom:19
+        }).addTo(this.map);
+        this.stationLayer=L.layerGroup().addTo(this.map);
+        this.curbLayer=L.layerGroup();
+    }
 
-  map.addLayer(markers);
-  document.getElementById('visCount').textContent = visible.toLocaleString();
-  updateCharts(areaCounts, modelCounts);
+    updateMap(area){
+        const layer=this.getLayer();
+        this.stationLayer.clearLayers();
+        this.curbLayer.clearLayers();
+        this.map.removeLayer(this.stationLayer);
+        this.map.removeLayer(this.curbLayer);
+
+        if(layer==='stations'){
+            this.stationLayer.addTo(this.map);
+            const pts=area==='all'?STATIONS:STATIONS.filter(s=>s[2]===area);
+            pts.forEach(s=>{
+                const peak=s[3];
+                L.circleMarker([s[0],s[1]],{
+                    radius:4,fillColor:rateColor(peak),color:'#fff',weight:.8,fillOpacity:.8
+                }).bindPopup(`<b>${s[2]}</b>${s[7]?'<br>Sub: '+s[7]:''}<br>Peak: <b>$${peak.toFixed(2)}/hr</b><br>Off-peak: $${s[4].toFixed(2)}/hr<br>Hours: ${s[5]}<br>Model: ${s[6]||'N/A'}`,{className:'popup'})
+                .addTo(this.stationLayer);
+            });
+            document.getElementById('map-legend').innerHTML=
+                '<b>Pay Station Peak Rate</b><br>'+
+                ['#3b82f6','#22c55e','#eab308','#f97316','#dc2626'].map((c,i)=>
+                    `<span class="dot" style="background:${c}"></span>${['$1-1.50','$1.50-2.50','$2.50-4','$4-6','$6+'][i]}`
+                ).join('<br>');
+            if(area!=='all'){
+                const a=AREAS.find(a=>a.area===area);
+                if(a) this.map.setView([a.lat,a.lng],15);
+            } else this.map.setView([47.615,-122.335],13);
+        } else {
+            this.curbLayer.addTo(this.map);
+            const pts=area==='all'?CURB:CURB.filter(s=>s[2]===area);
+            pts.forEach(s=>{
+                const col=COLORS[s[3]]||COLORS.Other;
+                L.circleMarker([s[0],s[1]],{
+                    radius:3,fillColor:col,color:col,weight:0,fillOpacity:.7
+                }).bindPopup(`<b>${s[4]}</b><br>Area: ${s[2]}<br>Category: ${s[3]}`,{className:'popup'})
+                .addTo(this.curbLayer);
+            });
+            document.getElementById('map-legend').innerHTML=
+                '<b>Curb Category</b><br>'+
+                ['PAID','LOAD','ZONE','BUS','DP','BIKE'].map(c=>
+                    `<span class="dot" style="background:${COLORS[c]}"></span>${CAT_LABELS[c]}`
+                ).join('<br>');
+            if(area!=='all'){
+                const a=AREAS.find(a=>a.area===area);
+                if(a) this.map.setView([a.lat,a.lng],15);
+            } else this.map.setView([47.615,-122.335],13);
+        }
+    }
+    updateMapLayer(){this.updateMap(this.getArea())}
+
+    renderRatesChart(fa){
+        const sorted=[...fa].sort((a,b)=>Math.max(b.r1||0,b.r2||0,b.r3||0)-Math.max(a.r1||0,a.r2||0,a.r3||0)).slice(0,15);
+        const labels=sorted.map(a=>a.area);
+        const ds=[
+            {label:'Off-Peak (Rate 1)',data:sorted.map(a=>a.r1||0),backgroundColor:'rgba(59,130,246,0.7)'},
+            {label:'Peak (Rate 2)',data:sorted.map(a=>a.r2||0),backgroundColor:'rgba(249,115,22,0.7)'},
+            {label:'Evening (Rate 3)',data:sorted.map(a=>a.r3||0),backgroundColor:'rgba(168,85,247,0.7)'}
+        ];
+        if(this.charts.rates) this.charts.rates.destroy();
+        this.charts.rates=new Chart(document.getElementById('c-rates'),{
+            type:'bar',data:{labels,datasets:ds},
+            options:{responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{position:'top',labels:{usePointStyle:true,padding:10,font:{size:10}}}},
+                scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:45}},
+                    y:{beginAtZero:true,title:{display:true,text:'$/hr',font:{size:10}}}}
+            }
+        });
+    }
+
+    renderCountChart(fa){
+        const sorted=[...fa].sort((a,b)=>b.cnt-a.cnt).slice(0,15);
+        if(this.charts.count) this.charts.count.destroy();
+        this.charts.count=new Chart(document.getElementById('c-count'),{
+            type:'bar',data:{labels:sorted.map(a=>a.area),datasets:[{
+                data:sorted.map(a=>a.cnt),
+                backgroundColor:sorted.map((_,i)=>`hsl(${210+i*12},70%,55%)`),
+                borderRadius:4
+            }]},
+            options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+                plugins:{legend:{display:false}},
+                scales:{x:{beginAtZero:true,grid:{display:true}},y:{grid:{display:false},ticks:{font:{size:10}}}}
+            }
+        });
+    }
+
+    renderCurbDonut(area){
+        let data;
+        if(area==='all'){
+            data={};
+            Object.values(CURB_ALLOC).forEach(a=>{
+                Object.entries(a).forEach(([k,v])=>{data[k]=(data[k]||0)+v});
+            });
+        } else {
+            data=CURB_ALLOC[area]||{};
+        }
+        const cats=Object.keys(data).filter(k=>data[k]>0).sort((a,b)=>data[b]-data[a]);
+        if(this.charts.curb) this.charts.curb.destroy();
+        this.charts.curb=new Chart(document.getElementById('c-curb'),{
+            type:'doughnut',data:{labels:cats.map(c=>CAT_LABELS[c]||c),datasets:[{
+                data:cats.map(c=>data[c]),
+                backgroundColor:cats.map(c=>COLORS[c]||COLORS.Other),
+                borderColor:'#fff',borderWidth:2
+            }]},
+            options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+                plugins:{legend:{position:'right',labels:{usePointStyle:true,padding:8,font:{size:10}}},
+                    tooltip:{callbacks:{label:ctx=>{
+                        const t=ctx.dataset.data.reduce((s,v)=>s+v,0);
+                        return `${ctx.label}: ${ctx.parsed.toLocaleString()} (${(ctx.parsed/t*100).toFixed(1)}%)`;
+                    }}}
+                }
+            }
+        });
+    }
+
+    renderStackedBar(area){
+        const topAreas=Object.keys(CURB_ALLOC).slice(0,12);
+        const useCats=['PAID','NP','LOAD','ZONE','BUS','Other'];
+        const datasets=useCats.map(c=>({
+            label:CAT_LABELS[c]||c,
+            data:topAreas.map(a=>CURB_ALLOC[a]?.[c]||0),
+            backgroundColor:COLORS[c]||COLORS.Other
+        }));
+        if(this.charts.stacked) this.charts.stacked.destroy();
+        this.charts.stacked=new Chart(document.getElementById('c-stacked'),{
+            type:'bar',data:{labels:topAreas,datasets},
+            options:{responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{position:'top',labels:{usePointStyle:true,padding:8,font:{size:10}}}},
+                scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9},maxRotation:45}},
+                    y:{stacked:true,beginAtZero:true,title:{display:true,text:'Curb Spaces'}}}
+            }
+        });
+    }
+
+    renderHoursChart(fa){
+        function parseDur(hrs){
+            if(!hrs) return 0;
+            const parts=hrs.split('-');
+            if(parts.length<2) return 0;
+            const toMin=s=>{
+                const m=s.match(/(\d+)(AM|PM)/);
+                if(!m) return 0;
+                let h=parseInt(m[1]);
+                if(m[2]==='PM'&&h<12) h+=12;
+                if(m[2]==='AM'&&h===12) h=0;
+                return h;
+            };
+            return toMin(parts[1])-toMin(parts[0]);
+        }
+        const sorted=[...fa].sort((a,b)=>parseDur(b.hrs)-parseDur(a.hrs)).slice(0,15);
+        if(this.charts.hours) this.charts.hours.destroy();
+        this.charts.hours=new Chart(document.getElementById('c-hours'),{
+            type:'bar',data:{labels:sorted.map(a=>a.area),datasets:[{
+                label:'Paid Hours/Day',
+                data:sorted.map(a=>parseDur(a.hrs)),
+                backgroundColor:sorted.map(a=>{const d=parseDur(a.hrs);return d>=14?'rgba(239,68,68,.7)':d>=12?'rgba(249,115,22,.7)':'rgba(59,130,246,.7)'}),
+                borderRadius:4
+            }]},
+            options:{responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{display:false},
+                    tooltip:{callbacks:{label:ctx=>{const a=sorted[ctx.dataIndex];return `${ctx.parsed.y} hrs (${a.hrs})`}}}
+                },
+                scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:45}},
+                    y:{beginAtZero:true,max:16,title:{display:true,text:'Hours'},ticks:{stepSize:2}}}
+            }
+        });
+    }
+
+    renderTable(fa){
+        const sorted=[...fa].sort((a,b)=>{
+            const av=a[this.sortCol],bv=b[this.sortCol];
+            if(av==null) return 1;if(bv==null) return -1;
+            return this.sortDir==='asc'?(av<bv?-1:1):(av>bv?-1:1);
+        });
+        const maxPeak=Math.max(...fa.map(a=>Math.max(a.r1||0,a.r2||0,a.r3||0)));
+        const cols=[
+            {f:'area',l:'Neighborhood',fmt:v=>v},
+            {f:'cnt',l:'Stations',fmt:v=>v},
+            {f:'r1',l:'Off-Peak',fmt:v=>v?'$'+v.toFixed(2):'—'},
+            {f:'r2',l:'Peak Rate',fmt:v=>v?'$'+v.toFixed(2):'—'},
+            {f:'r3',l:'Evening',fmt:v=>v?'$'+v.toFixed(2):'—'},
+            {f:'sr',l:'Saturday',fmt:v=>v?'$'+v.toFixed(2):'—'},
+            {f:'hrs',l:'Hours',fmt:v=>v||'—'}
+        ];
+        let h='<table><thead><tr>';
+        cols.forEach(c=>{
+            const arr=this.sortCol===c.f?(this.sortDir==='asc'?' ▲':' ▼'):'';
+            h+=`<th data-f="${c.f}">${c.l}${arr}</th>`;
+        });
+        h+='<th>Peak Rate Visual</th></tr></thead><tbody>';
+        sorted.forEach(r=>{
+            h+='<tr>';
+            cols.forEach(c=>h+=`<td>${c.fmt(r[c.f])}</td>`);
+            const peak=Math.max(r.r1||0,r.r2||0,r.r3||0);
+            const pct=maxPeak>0?peak/maxPeak*100:0;
+            h+=`<td><span class="rate-bar" style="width:${pct}%;background:${rateColor(peak)}"></span>$${peak.toFixed(2)}</td>`;
+            h+='</tr>';
+        });
+        h+='</tbody></table>';
+        document.getElementById('tbl').innerHTML=h;
+        document.querySelectorAll('#tbl th').forEach(th=>{
+            th.onclick=()=>{
+                const f=th.dataset.f;
+                if(this.sortCol===f) this.sortDir=this.sortDir==='asc'?'desc':'asc';
+                else{this.sortCol=f;this.sortDir='desc'}
+                this.renderTable(this.getArea()==='all'?AREAS:AREAS.filter(a=>a.area===this.getArea()));
+            };
+        });
+    }
 }
 
-// ══════════════════════════════════════════════
-// Charts
-// ══════════════════════════════════════════════
-function updateCharts(areaCounts, modelCounts) {
-  if (modelChartInst) modelChartInst.destroy();
-  modelChartInst = new Chart(document.getElementById('modelChart'), {
-    type: 'doughnut',
-    data: { labels: ['MS1','REV1','VIR'], datasets: [{ data: [modelCounts.MS1, modelCounts.REV1, modelCounts.VIR], backgroundColor: ['#0EA5E9','#10B981','#F59E0B'], borderWidth: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
-      plugins: { legend: { position: 'right', labels: { color: '#94A3B8', font: { family: 'Inter', size: 11 }, padding: 8, usePointStyle: true, pointStyleWidth: 8 } } }
-    }
-  });
-
-  const sorted = Object.entries(areaCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
-  if (areaChartInst) areaChartInst.destroy();
-  areaChartInst = new Chart(document.getElementById('areaChart'), {
-    type: 'bar',
-    data: { labels: sorted.map(s => s[0].length > 14 ? s[0].substring(0,12)+'..' : s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: '#0EA5E9', borderRadius: 3, barThickness: 14 }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      scales: { x: { grid: { color: '#1E293B' }, ticks: { color: '#94A3B8', font: { size: 10 } } }, y: { grid: { display: false }, ticks: { color: '#CBD5E1', font: { family: 'Inter', size: 10 } } } },
-      plugins: { legend: { display: false } }
-    }
-  });
-}
-
-function buildStoryCharts() {
-  const totalCurb = Object.values(curbStats).reduce((s, a) => s + a.total, 0);
-  const totalPaid = Object.values(curbStats).reduce((s, a) => s + a.paid, 0);
-  const totalNP = Object.values(curbStats).reduce((s, a) => s + a.np, 0);
-  const totalNS = Object.values(curbStats).reduce((s, a) => s + a.ns, 0);
-  const totalOther = totalCurb - totalPaid - totalNP - totalNS;
-
-  new Chart(document.getElementById('curbPieChart'), {
-    type: 'doughnut',
-    data: { labels: [`Paid (${((totalPaid/totalCurb)*100).toFixed(1)}%)`, `No Parking (${((totalNP/totalCurb)*100).toFixed(1)}%)`, `No Stopping (${((totalNS/totalCurb)*100).toFixed(1)}%)`, `Other (${((totalOther/totalCurb)*100).toFixed(1)}%)`],
-      datasets: [{ data: [totalPaid, totalNP, totalNS, totalOther], backgroundColor: ['#0EA5E9','#EF4444','#F59E0B','#8B5CF6'], borderWidth: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '55%',
-      plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8', font: { family: 'Inter', size: 10 }, padding: 6, usePointStyle: true } } }
-    }
-  });
-
-  const plate = stations.filter(s => s.cat === 'PLATE').length;
-  const space = stations.filter(s => s.cat === 'SPACE').length;
-  const trolley = stations.filter(s => s.cat === 'TRLY').length;
-  const other = stations.length - plate - space - trolley;
-  new Chart(document.getElementById('techChart'), {
-    type: 'bar',
-    data: { labels: ['Plate-Based','Space-Based','Trolley','Other'], datasets: [{ data: [plate, space, trolley, other], backgroundColor: ['#8B5CF6','#0EA5E9','#10B981','#F59E0B'], borderRadius: 4, barThickness: 20 }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94A3B8', font: { size: 10 } } }, x: { grid: { display: false }, ticks: { color: '#CBD5E1', font: { size: 10 } } } },
-      plugins: { legend: { display: false } }
-    }
-  });
-}
-
-// ══════════════════════════════════════════════
-// Event Listeners
-// ══════════════════════════════════════════════
-document.getElementById('filterArea').addEventListener('change', () => {
-  buildMarkers();
-  const val = document.getElementById('filterArea').value;
-  if (!val) { map.setView([47.615, -122.34], 13); return; }
-  const areaStations = stations.filter(s => s.area === val);
-  if (areaStations.length) {
-    const lats = areaStations.map(s => s.lat), lngs = areaStations.map(s => s.lng);
-    map.fitBounds([[Math.min(...lats)-0.002, Math.min(...lngs)-0.002],[Math.max(...lats)+0.002, Math.max(...lngs)+0.002]]);
-  }
-});
-document.getElementById('filterRate').addEventListener('input', e => {
-  document.getElementById('rateVal').textContent = '$' + parseFloat(e.target.value).toFixed(2);
-  buildMarkers();
-});
-document.querySelectorAll('.modelCb').forEach(cb => cb.addEventListener('change', buildMarkers));
-document.querySelectorAll('.day-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    dayType = btn.dataset.day;
-    buildMarkers();
-  });
-});
-document.getElementById('resetBtn').addEventListener('click', () => {
-  document.getElementById('filterArea').value = '';
-  document.getElementById('filterRate').value = 2.5;
-  document.getElementById('rateVal').textContent = '$2.50';
-  document.querySelectorAll('.modelCb').forEach(cb => cb.checked = true);
-  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('.day-btn[data-day="wkd"]').classList.add('active');
-  dayType = 'wkd';
-  buildMarkers();
-  map.setView([47.615, -122.34], 13);
-});
-
-// ══════════════════════════════════════════════
-// Init
-// ══════════════════════════════════════════════
-loadData();
+const D=new Dashboard();
+D.init();
 </script>
 </body>
 </html>
