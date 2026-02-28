@@ -13,8 +13,7 @@ Includes a simple in-memory cache to avoid hitting Fabric on every request.
 
 import os
 import time
-import struct
-import pyodbc
+import pymssql
 from azure.identity import ClientSecretCredential
 
 # ── Configuration ──
@@ -34,7 +33,7 @@ _cache = {}
 
 def get_connection():
     """
-    Create a pyodbc connection to Microsoft Fabric SQL Endpoint
+    Create a pymssql connection to Microsoft Fabric SQL Endpoint
     using a Service Principal (App Registration) for authentication.
     """
     # Get an Azure AD token using the Service Principal
@@ -45,20 +44,15 @@ def get_connection():
     )
     token = credential.get_token("https://database.windows.net/.default")
 
-    # Build the connection string
-    conn_str = (
-        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
-        f"SERVER={FABRIC_SQL_SERVER};"
-        f"DATABASE={FABRIC_DATABASE};"
-        f"Encrypt=yes;"
-        f"TrustServerCertificate=no;"
+    # pymssql can connect using the access token directly
+    conn = pymssql.connect(
+        server=FABRIC_SQL_SERVER,
+        database=FABRIC_DATABASE,
+        tds_version="7.4",
+        port=1433,
+        user="token",
+        password=token.token
     )
-
-    # pyodbc needs the token as a bytes struct for Azure AD auth
-    token_bytes = token.token.encode("UTF-16-LE")
-    token_struct = struct.pack(f'<I{len(token_bytes)}s', len(token_bytes), token_bytes)
-
-    conn = pyodbc.connect(conn_str, attrs_before={1256: token_struct})
     return conn
 
 
@@ -82,11 +76,9 @@ def query_fabric(sql, cache_key=None):
     # Execute query
     conn = get_connection()
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(as_dict=True)
         cursor.execute(sql)
-        columns = [desc[0] for desc in cursor.description]
-        rows = cursor.fetchall()
-        results = [dict(zip(columns, row)) for row in rows]
+        results = cursor.fetchall()
     finally:
         conn.close()
 
