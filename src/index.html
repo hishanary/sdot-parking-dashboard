@@ -108,7 +108,7 @@ select:focus{outline:none;border-color:#0EA5E9}
     <div class="header-subtitle">SDOT On-Street Parking Infrastructure | Live from Microsoft Fabric</div>
   </div>
   <div class="header-right">
-    <div class="live-badge"><div class="live-dot"></div> Live Data</div>
+    <div class="live-badge"><div class="live-dot"></div> Data Synced</div>
     <div class="kpi-bar">
       <div class="kpi"><div class="kpi-value" id="kpiStations">--</div><div class="kpi-label">Pay Stations</div></div>
       <div class="kpi"><div class="kpi-value green" id="kpiCurb">--</div><div class="kpi-label">Curb Spaces</div></div>
@@ -242,8 +242,7 @@ select:focus{outline:none;border-color:#0EA5E9}
 // ══════════════════════════════════════════════
 // Configuration
 // ══════════════════════════════════════════════
-const API_BASE = '/api';  // Azure Function API (same domain via Static Web App proxy)
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // Auto-refresh every 5 minutes
+const DATA_BASE = '/data';  // Static JSON files
 
 // ══════════════════════════════════════════════
 // State
@@ -267,13 +266,13 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 // Data Fetching
 // ══════════════════════════════════════════════
 async function fetchStations() {
-  const res = await fetch(`${API_BASE}/stations`);
+  const res = await fetch(`${DATA_BASE}/stations.json`);
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   return await res.json();
 }
 
 async function fetchCurbStats() {
-  const res = await fetch(`${API_BASE}/curb-stats`);
+  const res = await fetch(`${DATA_BASE}/curb-stats.json`);
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   return await res.json();
 }
@@ -521,10 +520,9 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 // ══════════════════════════════════════════════
-// Init + Auto-refresh
+// Init
 // ══════════════════════════════════════════════
 loadData();
-setInterval(loadData, REFRESH_INTERVAL_MS);
 </script>
 </body>
 </html>
